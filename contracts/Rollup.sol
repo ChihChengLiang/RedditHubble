@@ -11,7 +11,7 @@ import { RollupUtils } from "./libs/RollupUtils.sol";
 import { BLSAccountRegistry } from "./BLSAccountRegistry.sol";
 import { Logger } from "./Logger.sol";
 import { POB } from "./POB.sol";
-import { MerkleTreeUtils as MTUtils } from "./MerkleTreeUtils.sol";
+import { MerkleTreeUtils, MerkleTreeUtilsLib } from "./MerkleTreeUtils.sol";
 import { NameRegistry as Registry } from "./NameRegistry.sol";
 import { Governance } from "./Governance.sol";
 import { DepositManager } from "./DepositManager.sol";
@@ -51,7 +51,7 @@ contract RollupSetup {
     ITokenRegistry public tokenRegistry;
     Registry public nameRegistry;
     Types.Batch[] public batches;
-    MTUtils public merkleUtils;
+    MerkleTreeUtils public merkleUtils;
 
     IRollupReddit public rollupReddit;
 
@@ -169,6 +169,27 @@ contract RollupHelpers is RollupSetup {
 
         logger.logRollbackFinalisation(totalSlashings);
     }
+
+    function checkInclusion(
+        bytes32 root,
+        Types.CommitmentInclusionProof memory proof
+    ) internal pure returns (bool) {
+        return
+            MerkleTreeUtilsLib.verifyLeaf(
+                root,
+                RollupUtils.CommitmentToHash(
+                    proof.commitment.stateRoot,
+                    proof.commitment.accountRoot,
+                    proof.commitment.signature,
+                    proof.commitment.txs,
+                    proof.commitment.tokenType,
+                    proof.commitment.feeReceiver,
+                    uint8(proof.commitment.batchType)
+                ),
+                proof.pathToCommitment,
+                proof.witness
+            );
+    }
 }
 
 contract Rollup is RollupHelpers {
@@ -192,7 +213,7 @@ contract Rollup is RollupHelpers {
         governance = Governance(
             nameRegistry.getContractDetails(ParamManager.Governance())
         );
-        merkleUtils = MTUtils(
+        merkleUtils = MerkleTreeUtils(
             nameRegistry.getContractDetails(ParamManager.MERKLE_UTILS())
         );
         accountRegistry = BLSAccountRegistry(
@@ -351,19 +372,9 @@ contract Rollup is RollupHelpers {
         // verify is the commitment exits in the batch
         {
             require(
-                merkleUtils.verifyLeaf(
+                checkInclusion(
                     batches[_batch_id].commitmentRoot,
-                    RollupUtils.CommitmentToHash(
-                        commitmentMP.commitment.stateRoot,
-                        commitmentMP.commitment.accountRoot,
-                        commitmentMP.commitment.signature,
-                        commitmentMP.commitment.txs,
-                        commitmentMP.commitment.tokenType,
-                        commitmentMP.commitment.feeReceiver,
-                        uint8(commitmentMP.commitment.batchType)
-                    ),
-                    commitmentMP.pathToCommitment,
-                    commitmentMP.witness
+                    commitmentMP
                 ),
                 "Commitment not present in batch"
             );
@@ -427,21 +438,8 @@ contract Rollup is RollupHelpers {
         }
         // verify is the commitment exits in the batch
         require(
-            merkleUtils.verifyLeaf(
-                batches[batchID].commitmentRoot,
-                RollupUtils.CommitmentToHash(
-                    commitmentProof.commitment.stateRoot,
-                    commitmentProof.commitment.accountRoot,
-                    commitmentProof.commitment.signature,
-                    txs,
-                    commitmentProof.commitment.tokenType,
-                    commitmentProof.commitment.feeReceiver,
-                    uint8(commitmentProof.commitment.batchType)
-                ),
-                commitmentProof.pathToCommitment,
-                commitmentProof.witness
-            ),
-            "Commitment not present in batch"
+            checkInclusion(batches[batchID].commitmentRoot, commitmentProof),
+            "Rollup: Commitment not present in batch"
         );
 
         Types.ErrorCode errCode = rollupReddit.checkTransferSignature(
