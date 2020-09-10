@@ -417,8 +417,7 @@ contract Rollup is RollupHelpers {
     function disputeSignature(
         uint256 batchID,
         Types.CommitmentInclusionProof memory commitmentProof,
-        Types.SignatureProof memory signatureProof,
-        bytes memory txs
+        Types.SignatureProof memory signatureProof
     ) public {
         {
             // check if batch is disputable
@@ -448,7 +447,7 @@ contract Rollup is RollupHelpers {
             commitmentProof.commitment.stateRoot,
             commitmentProof.commitment.accountRoot,
             signatureProof,
-            txs
+            commitmentProof.commitment.txs
         );
 
         if (errCode != Types.ErrorCode.NoError) {
