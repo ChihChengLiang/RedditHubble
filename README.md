@@ -4,7 +4,7 @@
 
 ## About Hubble
 
-Hubble is a token transfer solution to improve Ethereum throughput from 20 transactions per second to 2600.
+Hubble is a token transfer solution to improve Ethereum throughput from 20 transactions per second to 100000000000.
 
 ### How it work
 
