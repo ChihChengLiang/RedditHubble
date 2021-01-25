@@ -1,0 +1,22 @@
+categories:
+  - title: ':sparkles: New Feature'
+    label: 'enhancement'
+  - title: ':bug: BugFix'
+    label: 'bugfix'
+  - title: ':zap: Performance'
+    label: 'performance'
+version-resolver:
+  minor:
+    labels:
+      - 'interface:frontend'
+      - 'interface:core'
+      - 'genesis-format'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+prerelease: true
+template: |
+  ## What’s Changed
+
+  $CHANGES
